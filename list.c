@@ -7,7 +7,7 @@ typedef struct list_node_t {
     struct list_node_t * next;
 } list_node_t;
 
-list_node_t * list_node_new();
+list_node_t * list_node_new(void * data);
 
 void list_node_free(list_node_t * this);
 
@@ -86,3 +86,22 @@ int list_contains(list_t * this, void * data, list_equality_f eq) {
     return 0;
 }
 
+int priority_list_push(list_t * this, void * data, list_cmp_f cmp) {
+    if (this->head == NULL) {
+        return list_push_front(this, data);
+    }
+
+    list_node_t * node;
+    for (node = this->head; node != NULL; node = node->next) {
+        if (node->next == NULL || cmp(node->data, node->next->data) <= 0) {
+            list_node_t * new_node = list_node_new(data);
+            if (new_node == NULL) {
+                return -1;
+            }
+            new_node->next = node->next;
+            node->next = new_node;
+            return 0;
+        }
+    }
+    return -1;
+}

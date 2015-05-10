@@ -3,6 +3,7 @@
 
 typedef void * (* list_unary_f)(void *);
 typedef int (* list_equality_f)(void *, void *);
+typedef int (* list_cmp_f)(void *, void *);
 
 struct list_node_t;
 
@@ -23,5 +24,7 @@ void * list_pop_front(list_t *);
 void list_map(list_t *, list_unary_f);
 
 int list_contains(list_t *, void *, list_equality_f);
+
+int priority_list_push(list_t *, void *, list_cmp_f);
 
 #endif

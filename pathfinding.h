@@ -13,6 +13,6 @@ extern void * find_path(void * start, void * end,
         heuristic_distance_f heuristic_distance,
         neighborhood_f neighborhood,
         position_eq_f position_eq,
-        uint32_t space_size, uint32_t * path_size, double * path_distance);
+        uint32_t * path_size, double * path_distance);
 
 #endif

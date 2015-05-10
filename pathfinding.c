@@ -16,9 +16,7 @@ typedef struct AStar {
     void * start;
     void * end;
     list_t * close_set;
-    Node ** open_set;
-    uint32_t open_set_size;
-    uint32_t open_set_max_size;
+    list_t * open_set;
     distance_f distance;
     heuristic_distance_f heuristic_distance;
     neighborhood_f neighborhood;
@@ -30,14 +28,13 @@ static Node * node_new(void * position, double distance_from_start,
 
 static void node_free(Node * n);
 
-static int node_cmp(Node * a, Node * b);
+static int node_cmp(void * a, void * b);
 
 static AStar * astar_new(void * start, void * end,
         distance_f distance,
         heuristic_distance_f heuristic_distance,
         neighborhood_f neighborhood,
-        position_eq_f position_eq,
-        uint32_t space_size);
+        position_eq_f position_eq);
 
 static void astar_free();
 
@@ -72,16 +69,17 @@ void node_free(Node * n) {
     free(n);
 }
 
-int node_cmp(Node * a, Node * b) {
-    return a->distance - b->distance;
+int node_cmp(void * a, void * b) {
+    Node * na = (Node *) a;
+    Node * nb = (Node *) b;
+    return na->distance - nb->distance;
 }
 
 AStar * astar_new(void * start, void * end,
         distance_f distance,
         heuristic_distance_f heuristic_distance,
         neighborhood_f neighborhood,
-        position_eq_f position_eq,
-        uint32_t space_size) {
+        position_eq_f position_eq) {
     AStar * this = malloc(sizeof(AStar));
     if (this == NULL)
         return NULL;
@@ -93,14 +91,12 @@ AStar * astar_new(void * start, void * end,
       free(this);
       return NULL;
     }
-    this->open_set = calloc(sizeof(Node *), space_size);
+    this->open_set = list_new();
     if (this->open_set == NULL) {
         free(this->close_set);
         free(this);
         return NULL;
     }
-    this->open_set_size = 0;
-    this->open_set_max_size = space_size;
     this->distance = distance;
     this->heuristic_distance = heuristic_distance;
     this->neighborhood = neighborhood;
@@ -113,33 +109,11 @@ void astar_free() {
 }
 
 int astar_push_to_open_set(AStar * this, Node * node) {
-    if (this->open_set_size >= this->open_set_max_size)
-        return -1;
-
-    uint32_t i;
-    for (i = 0; i < this->open_set_size; i++) {
-        if (node_cmp(node, this->open_set[i]) <= 0) {
-            break;
-        }
-    }
-
-    memmove(&this->open_set[i], &this->open_set[i + 1],
-            sizeof(Node *) * (this->open_set_size - i));
-    this->open_set[i] = node;
-    this->open_set_size++;
-    return 0;
+    return priority_list_push(this->open_set, (void *) node, node_cmp);
 }
 
 static Node * astar_pop_from_open_set(AStar * this) {
-    if (this->open_set_size <= 0) {
-        return NULL;
-    }
-
-    Node * node = this->open_set[0];
-    memmove(&this->open_set[1], &this->open_set[0],
-            sizeof(Node *) * (this->open_set_size - 1));
-    this->open_set_size--;
-    return node;
+    return list_pop_front(this->open_set);
 }
 
 int astar_add_to_close_set(AStar * this, Node * node) {
@@ -158,7 +132,7 @@ Node * astar_compute(AStar * this) {
     if (astar_push_to_open_set(this, node) != 0)
         return NULL;
 
-    while (this->open_set_size > 0) {
+    while (!list_is_empty(this->open_set)) {
         Node * node = astar_pop_from_open_set(this);
         if (node == NULL)
             return NULL;
@@ -190,6 +164,7 @@ Node * astar_compute(AStar * this) {
                 return NULL;
             astar_push_to_open_set(this, neighbor_node);
         }
+        free(neighbors);
     }
 
     return NULL;
@@ -200,9 +175,9 @@ void * find_path(void * start, void * end,
         heuristic_distance_f heuristic_distance,
         neighborhood_f neighborhood,
         position_eq_f position_eq,
-        uint32_t space_size, uint32_t * path_size, double * path_distance) {
+        uint32_t * path_size, double * path_distance) {
     AStar * astar = astar_new(start, end,
-            distance, heuristic_distance, neighborhood, position_eq, space_size);
+            distance, heuristic_distance, neighborhood, position_eq);
     if (astar == NULL)
         return NULL;
 
