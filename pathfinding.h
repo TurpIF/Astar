@@ -8,7 +8,7 @@ typedef double (* heuristic_distance_f)(void *, void *);
 typedef void ** (* neighborhood_f)(void *, uint32_t *);
 typedef int (* position_eq_f)(void *, void *);
 
-extern void * find_path(void * start, void * end,
+extern void ** find_path(void * start, void * end,
         distance_f distance,
         heuristic_distance_f heuristic_distance,
         neighborhood_f neighborhood,

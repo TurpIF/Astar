@@ -25,6 +25,8 @@ void list_map(list_t *, list_unary_f);
 
 int list_contains(list_t *, void *, list_equality_f);
 
+void * list_find(list_t *, void *, list_equality_f);
+
 int priority_list_push(list_t *, void *, list_cmp_f);
 
 #endif

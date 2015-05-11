@@ -74,16 +74,20 @@ void list_map(list_t * this, list_unary_f function) {
 }
 
 int list_contains(list_t * this, void * data, list_equality_f eq) {
+    return list_find(this, data, eq) != NULL ? 1 : 0;
+}
+
+void * list_find(list_t * this, void * data, list_equality_f eq) {
     list_node_t * node;
     for (node = this->head; node != NULL; node = node->next) {
         if (eq == NULL && node->data == data) {
-            return 1;
+            return node->data;
         }
         else if (eq != NULL && eq(node->data, data)) {
-            return 1;
+            return node->data;
         }
     }
-    return 0;
+    return NULL;
 }
 
 int priority_list_push(list_t * this, void * data, list_cmp_f cmp) {
