@@ -17,6 +17,7 @@ typedef struct astar_t {
     void * end;
     list_t * close_set;
     list_t * open_set;
+    list_t * trash_set;
     distance_f distance;
     heuristic_distance_f heuristic_distance;
     neighborhood_f neighborhood;
@@ -35,6 +36,8 @@ static node_t * node_new(void * position, double distance_from_start,
 
 static void node_free(node_t * n);
 
+static void * vnode_free(void * vn);
+
 static int node_cmp(void * a, void * b);
 
 static astar_t * astar_new(void * start, void * end,
@@ -43,7 +46,7 @@ static astar_t * astar_new(void * start, void * end,
         neighborhood_f neighborhood,
         position_eq_f position_eq);
 
-static void astar_free();
+static void astar_free(astar_t * this);
 
 static int astar_push_to_open_set(astar_t * this, node_t * node);
 
@@ -51,7 +54,7 @@ static node_t * astar_pop_from_open_set(astar_t * this);
 
 static node_t * astar_find_in_open_set(astar_t * this, void * position);
 
-static int astar_add_to_close_set(astar_t * this, node_t * node);
+static int astar_add_to_close_set(astar_t * this, void * position);
 
 static int astar_in_close_set(astar_t * this, void * position);
 
@@ -84,6 +87,11 @@ void node_free(node_t * n) {
     free(n);
 }
 
+void * vnode_free(void * vn) {
+    node_free((node_t *) vn);
+    return NULL;
+}
+
 int node_cmp(void * a, void * b) {
     node_t * na = (node_t *) a;
     node_t * nb = (node_t *) b;
@@ -101,15 +109,19 @@ astar_t * astar_new(void * start, void * end,
 
     this->start = start;
     this->end = end;
+    this->trash_set = list_new();
+    if (this->trash_set == NULL) {
+        astar_free(this);
+        return NULL;
+    }
     this->close_set = list_new();
     if (this->close_set == NULL) {
-      free(this);
-      return NULL;
+        astar_free(this);
+        return NULL;
     }
     this->open_set = list_new();
     if (this->open_set == NULL) {
-        free(this->close_set);
-        free(this);
+        astar_free(this);
         return NULL;
     }
     this->distance = distance;
@@ -119,8 +131,20 @@ astar_t * astar_new(void * start, void * end,
     return this;
 }
 
-void astar_free() {
-    // TODO
+void astar_free(astar_t * this) {
+    if (this->trash_set != NULL) {
+        list_map(this->trash_set, vnode_free);
+        list_free(this->trash_set);
+    }
+    if (this->open_set != NULL)
+        list_free(this->open_set);
+    if (this->close_set != NULL)
+        list_free(this->close_set);
+
+    this->trash_set = NULL;
+    this->open_set = NULL;
+    this->close_set = NULL;
+    free(this);
 }
 
 int astar_push_to_open_set(astar_t * this, node_t * node) {
@@ -138,8 +162,8 @@ node_t * astar_find_in_open_set(astar_t * this, void * position) {
     return (node_t *) list_find(this->open_set, (void *) &closure, astar_position_eq);
 }
 
-int astar_add_to_close_set(astar_t * this, node_t * node) {
-    return list_push_front(this->close_set, node->position);
+int astar_add_to_close_set(astar_t * this, void * position) {
+    return list_push_front(this->close_set, position);
 }
 
 int astar_in_close_set(astar_t * this, void * position) {
@@ -151,17 +175,23 @@ node_t * astar_compute(astar_t * this) {
     node_t * node = node_new(this->end, 0.0, heuristic_distance, NULL);
     if (node == NULL)
         return NULL;
-    if (astar_push_to_open_set(this, node) != 0)
+    if (list_push_front(this->trash_set, node) != 0) {
+        astar_free(this);
         return NULL;
+    }
+    if (astar_push_to_open_set(this, node) != 0) {
+        astar_free(this);
+        return NULL;
+    }
 
     while (!list_is_empty(this->open_set)) {
         node_t * node = astar_pop_from_open_set(this);
         if (node == NULL) {
-            // TODO free
+            astar_free(this);
             return NULL;
         }
-        if (astar_add_to_close_set(this, node) != 0) {
-            // TODO free
+        if (astar_add_to_close_set(this, node->position) != 0) {
+            astar_free(this);
             return NULL;
         }
 
@@ -173,7 +203,7 @@ node_t * astar_compute(astar_t * this) {
         uint32_t nb_neighbors;
         void ** neighbors = this->neighborhood(node->position, &nb_neighbors);
         if (neighbors == NULL) {
-            // TODO free
+            astar_free(this);
             return NULL;
         }
 
@@ -199,7 +229,8 @@ node_t * astar_compute(astar_t * this) {
             else {
                 neighbor_node = node_new(neighbors[i], ds, de, node);
                 if (neighbor_node == NULL) {
-                    // TODO free
+                    free(neighbors);
+                    astar_free(this);
                     return NULL;
                 }
                 astar_push_to_open_set(this, neighbor_node);
@@ -239,7 +270,7 @@ void ** find_path(void * start, void * end,
         (*path_size)++;
     }
 
-    void ** path = (void **) calloc(sizeof(void *), *path_size); // FIXME
+    void ** path = (void **) calloc(*path_size, sizeof(void *));
     if (path == NULL)
         return NULL;
 
@@ -247,6 +278,8 @@ void ** find_path(void * start, void * end,
     for (i = 0; i < *path_size; i++, node = node->parent) {
         path[i] = node->position;
     }
+
+    astar_free(astar);
 
     return path;
 }

@@ -44,7 +44,7 @@ static Point start;
 static Point end;
 static Point * start_ptr = &start;
 
-static Point * map_point[WIDTH * HEIGHT] = {NULL};
+static Point * point_set[WIDTH * HEIGHT] = {NULL};
 
 static Point * point_new(uint32_t x, uint32_t y) {
     Point * p = (Point *) malloc(sizeof(Point));
@@ -56,12 +56,23 @@ static Point * point_new(uint32_t x, uint32_t y) {
     return p;
 }
 
+static void point_free(Point * this) {
+    free(this);
+}
+
+static void point_set_free() {
+    uint32_t i;
+    for (i = 0; i < WIDTH * HEIGHT; i++) {
+        point_free(point_set[i]);
+    }
+}
+
 static Point * get_point(uint32_t x, uint32_t y) {
     uint32_t p = x + y * WIDTH;
-    if (map_point[p] == NULL) {
-        map_point[p] = point_new(x, y);
+    if (point_set[p] == NULL) {
+        point_set[p] = point_new(x, y);
     }
-    return map_point[p];
+    return point_set[p];
 }
 
 static int is_wall(uint32_t x, uint32_t y) {
@@ -201,6 +212,7 @@ int main(void) {
     }
 
     print_map(map, WIDTH, HEIGHT, path, path_size);
+    point_set_free();
 
     return 0;
 }

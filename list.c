@@ -34,6 +34,10 @@ list_t * list_new() {
 }
 
 void list_free(list_t * this) {
+    if (this == NULL) {
+        return;
+    }
+
     list_node_t * node;
     for (node = this->head; node != NULL; node = node->next) {
         list_node_free(node);
@@ -69,7 +73,7 @@ void * list_pop_front(list_t * this) {
 void list_map(list_t * this, list_unary_f function) {
     list_node_t * node;
     for (node = this->head; node != NULL; node = node->next) {
-        function(node->data);
+        node->data = function(node->data);
     }
 }
 
