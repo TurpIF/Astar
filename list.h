@@ -5,11 +5,7 @@ typedef void * (* list_unary_f)(void *);
 typedef int (* list_equality_f)(void *, void *);
 typedef int (* list_cmp_f)(void *, void *);
 
-struct list_node_t;
-
-typedef struct list_t {
-    struct list_node_t * head;
-} list_t;
+typedef struct list_t list_t;
 
 list_t * list_new();
 

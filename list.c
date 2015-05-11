@@ -7,6 +7,11 @@ typedef struct list_node_t {
     struct list_node_t * next;
 } list_node_t;
 
+typedef struct list_t {
+    struct list_node_t * head;
+} list_t;
+
+
 list_node_t * list_node_new(void * data);
 
 void list_node_free(list_node_t * this);

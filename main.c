@@ -1,4 +1,5 @@
 #include "pathfinding.h"
+#include "map2d.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,7 +16,7 @@
 #define WIDTH 49
 #define HEIGHT 17
 
-int map[WIDTH * HEIGHT] = {
+int map_walls[WIDTH * HEIGHT] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1,
@@ -40,9 +41,8 @@ typedef struct Point {
     uint32_t y;
 } Point;
 
-static Point start;
-static Point end;
-static Point * start_ptr = &start;
+/* static Point start; */
+/* static Point end; */
 
 static Point * point_set[WIDTH * HEIGHT] = {NULL};
 
@@ -76,7 +76,7 @@ static Point * get_point(uint32_t x, uint32_t y) {
 }
 
 static int is_wall(uint32_t x, uint32_t y) {
-    return x >= WIDTH || y >= HEIGHT || map[x + y * WIDTH] != 0 ? 1 : 0;
+    return x >= WIDTH || y >= HEIGHT || map_walls[x + y * WIDTH] != 0 ? 1 : 0;
 }
 
 static int position_eq(void * vp1, void * vp2) {
@@ -164,12 +164,11 @@ static void ** neighborhood(void * position,
     return (void **) neighbors;
 }
 
-static void print_map(int * map, uint32_t width, uint32_t height,
-        Point ** path, uint32_t path_size) {
+static void print_map(map2d_t * map2d, point_t ** path, uint32_t path_size) {
     uint32_t x, y;
-    for (y = 0; y < height; y++) {
-        for (x = 0; x < width; x++) {
-            if (is_wall(x, y)) {
+    for (y = 0; y < map2d_get_height(map2d); y++) {
+        for (x = 0; x < map2d_get_width(map2d); x++) {
+            if (map2d_is_wall(map2d, x, y)) {
                 printf("#");
             }
             else {
@@ -185,17 +184,19 @@ static void print_map(int * map, uint32_t width, uint32_t height,
                 printf("%c", c);
             }
         }
-        if (y < height - 1) {
+        if (y < map2d_get_height(map2d) - 1) {
             printf("\n");
         }
     }
 }
 
 int main(void) {
-    start.x = 1;
-    start.y = 3;
-    end.x = WIDTH - 2;
-    end.y = HEIGHT - 2;
+    point_t start = {x: 1, y: 3};
+    point_t end = {x: WIDTH - 2, y: HEIGHT - 2};
+    /* start.x = 1; */
+    /* start.y = 3; */
+    /* end.x = WIDTH - 2; */
+    /* end.y = HEIGHT - 2; */
     /* start.x = 0; */
     /* start.y = 0; */
     /* end.x = WIDTH - 1; */
@@ -203,16 +204,20 @@ int main(void) {
 
     uint32_t path_size;
     double path_distance;
-    Point ** path = (Point **) find_path(&start, &end,
-            euclidean_distance, euclidean_distance, neighborhood, position_eq,
-            &path_size, &path_distance);
+    /* Point ** path = (Point **) find_path(&start, &end, */
+    /*         euclidean_distance, euclidean_distance, neighborhood, position_eq, */
+    /*         &path_size, &path_distance); */
+
+    map2d_t * map2d = map2d_new(map_walls, WIDTH, HEIGHT);
+    point_t ** path = map2d_find_path(map2d, start, end, &path_size, &path_distance);
     if (path == NULL) {
         fprintf(stderr, "Erreur");
         return -1;
     }
 
-    print_map(map, WIDTH, HEIGHT, path, path_size);
-    point_set_free();
+    /* printf("%lu %lf", path_size, path_distance); */
+    print_map(map2d, path, path_size);
+    map2d_free(map2d);
 
     return 0;
 }
